@@ -25,12 +25,21 @@ class OpenAICompatibleModel:
         api_key: str | None = None,
         *,
         temperature: float = 0.2,
-        timeout: float = 120.0,
+        reasoning_effort: str | None = None,
+        timeout: float = 300.0,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
+        """
+        Args:
+            reasoning_effort: Passed through for models that reason before answering.
+                ``"none"`` turns reasoning off on Ollama, which makes local models several
+                times faster for tool-calling tasks like this one. Leave unset for providers
+                that don't support it.
+        """
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self.model = model
         self._temperature = temperature
+        self._reasoning_effort = reasoning_effort
         self._client = httpx.Client(
             base_url=base_url.rstrip("/"), headers=headers, timeout=timeout, transport=transport
         )
@@ -44,6 +53,8 @@ class OpenAICompatibleModel:
         }
         if tools:
             payload["tools"] = [_encode_tool(t) for t in tools]
+        if self._reasoning_effort:
+            payload["reasoning_effort"] = self._reasoning_effort
 
         try:
             response = self._client.post("/chat/completions", json=payload)

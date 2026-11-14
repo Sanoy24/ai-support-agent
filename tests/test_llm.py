@@ -102,3 +102,19 @@ def test_omits_tools_when_none_given() -> None:
 def test_http_errors_raise_llm_error() -> None:
     with pytest.raises(LLMError, match="500"):
         make_model({}, [], status=500).complete([Message("user", "hi")], [])
+
+
+def test_reasoning_effort_is_sent_only_when_set() -> None:
+    seen: list[dict[str, Any]] = []
+    make_model({"content": "hi"}, seen).complete([Message("user", "hi")], [])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "hi"}}]})
+
+    OpenAICompatibleModel(
+        "m", "http://llm.test/v1", reasoning_effort="none", transport=httpx.MockTransport(handler)
+    ).complete([Message("user", "hi")], [])
+
+    assert "reasoning_effort" not in seen[0]
+    assert seen[1]["reasoning_effort"] == "none"
