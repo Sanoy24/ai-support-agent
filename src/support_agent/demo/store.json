@@ -1,0 +1,151 @@
+{
+  "orders": [
+    {
+      "number": "TS-1001",
+      "customer_email": "maya.chen@example.com",
+      "customer_first_name": "Maya",
+      "placed_on": "2026-11-02",
+      "status": "delivered",
+      "items": [
+        {"sku": "TS-JKT-RAIN-M", "title": "Ridgeline Rain Jacket (M, Slate)", "quantity": 1, "unit_price": 129.0}
+      ],
+      "shipment": {
+        "carrier": "UPS",
+        "tracking_number": "1Z999AA10123456784",
+        "shipped_on": "2026-11-03",
+        "estimated_delivery": "2026-11-07",
+        "delivered_on": "2026-11-06"
+      }
+    },
+    {
+      "number": "TS-1002",
+      "customer_email": "liam.okafor@example.com",
+      "customer_first_name": "Liam",
+      "placed_on": "2026-11-10",
+      "status": "shipped",
+      "items": [
+        {"sku": "TS-BOOT-HIKE-10", "title": "Summit Trail Hiking Boots (US 10)", "quantity": 1, "unit_price": 159.0},
+        {"sku": "TS-SOCK-MERINO", "title": "Merino Hiking Socks (3-pack)", "quantity": 2, "unit_price": 24.0}
+      ],
+      "shipment": {
+        "carrier": "USPS",
+        "tracking_number": "9400111899223344556677",
+        "shipped_on": "2026-11-11",
+        "estimated_delivery": "2026-11-16"
+      }
+    },
+    {
+      "number": "TS-1003",
+      "customer_email": "sofia.ramirez@example.com",
+      "customer_first_name": "Sofia",
+      "placed_on": "2026-11-13",
+      "status": "processing",
+      "items": [
+        {"sku": "TS-TENT-2P", "title": "Basecamp 2-Person Tent", "quantity": 1, "unit_price": 249.0}
+      ]
+    },
+    {
+      "number": "TS-1004",
+      "customer_email": "noah.berg@example.com",
+      "customer_first_name": "Noah",
+      "placed_on": "2026-10-20",
+      "status": "returned",
+      "items": [
+        {"sku": "TS-PACK-30L", "title": "Trailhead 30L Daypack (Forest)", "quantity": 1, "unit_price": 89.0}
+      ],
+      "shipment": {
+        "carrier": "UPS",
+        "tracking_number": "1Z999AA10987654321",
+        "shipped_on": "2026-10-21",
+        "delivered_on": "2026-10-24"
+      }
+    },
+    {
+      "number": "TS-1005",
+      "customer_email": "amara.diallo@example.com",
+      "customer_first_name": "Amara",
+      "placed_on": "2026-11-14",
+      "status": "unfulfilled",
+      "items": [
+        {"sku": "TS-BOTTLE-1L", "title": "Insulated Steel Bottle 1L", "quantity": 2, "unit_price": 34.0},
+        {"sku": "TS-HEADLAMP", "title": "Beacon 400 Headlamp", "quantity": 1, "unit_price": 45.0}
+      ]
+    },
+    {
+      "number": "TS-1006",
+      "customer_email": "ethan.walsh@example.com",
+      "customer_first_name": "Ethan",
+      "placed_on": "2026-11-05",
+      "status": "cancelled",
+      "items": [
+        {"sku": "TS-STOVE", "title": "Pocket Camp Stove", "quantity": 1, "unit_price": 59.0}
+      ]
+    }
+  ],
+  "products": [
+    {
+      "sku": "TS-JKT-RAIN",
+      "title": "Ridgeline Rain Jacket",
+      "description": "Fully waterproof 2.5-layer shell with taped seams, adjustable hood and pit zips. Packs into its own pocket. Runs true to size; size up if you layer a fleece underneath.",
+      "price": 129.0,
+      "in_stock": true,
+      "tags": ["jacket", "rain", "waterproof", "outerwear", "hiking"]
+    },
+    {
+      "sku": "TS-BOOT-HIKE",
+      "title": "Summit Trail Hiking Boots",
+      "description": "Mid-height waterproof leather boots with a grippy rubber outsole. Wide toe box. Most customers find them true to size; half sizes available. Break-in time is about a week of short walks.",
+      "price": 159.0,
+      "in_stock": true,
+      "tags": ["boots", "footwear", "waterproof", "hiking"]
+    },
+    {
+      "sku": "TS-SOCK-MERINO",
+      "title": "Merino Hiking Socks (3-pack)",
+      "description": "Cushioned merino wool blend socks that stay warm when wet and resist odor. Machine washable on cold.",
+      "price": 24.0,
+      "in_stock": true,
+      "tags": ["socks", "merino", "wool", "hiking"]
+    },
+    {
+      "sku": "TS-TENT-2P",
+      "title": "Basecamp 2-Person Tent",
+      "description": "Freestanding 3-season tent, 2.1 kg packed weight, two doors and two vestibules. Sets up in about 5 minutes. Rainfly rated 3000 mm.",
+      "price": 249.0,
+      "in_stock": true,
+      "tags": ["tent", "camping", "backpacking", "shelter"]
+    },
+    {
+      "sku": "TS-PACK-30L",
+      "title": "Trailhead 30L Daypack",
+      "description": "Lightweight daypack with a ventilated back panel, hydration sleeve, hip belt pockets and an integrated rain cover. Fits torso lengths 40 to 52 cm.",
+      "price": 89.0,
+      "in_stock": false,
+      "tags": ["backpack", "daypack", "hiking", "bag"]
+    },
+    {
+      "sku": "TS-BOTTLE-1L",
+      "title": "Insulated Steel Bottle 1L",
+      "description": "Double-wall vacuum insulated stainless steel. Keeps drinks cold for 24 hours or hot for 12. Dishwasher safe lid; hand wash the bottle.",
+      "price": 34.0,
+      "in_stock": true,
+      "tags": ["bottle", "hydration", "insulated", "camping"]
+    },
+    {
+      "sku": "TS-HEADLAMP",
+      "title": "Beacon 400 Headlamp",
+      "description": "400 lumen rechargeable headlamp with red night mode, USB-C charging and IPX4 water resistance. Up to 40 hours on low.",
+      "price": 45.0,
+      "in_stock": true,
+      "tags": ["headlamp", "lighting", "camping", "running"]
+    },
+    {
+      "sku": "TS-STOVE",
+      "title": "Pocket Camp Stove",
+      "description": "Ultralight 85 g canister stove that boils 1 liter of water in about 3.5 minutes. Fuel canister sold separately.",
+      "price": 59.0,
+      "in_stock": true,
+      "tags": ["stove", "cooking", "camping", "backpacking"]
+    }
+  ]
+}
