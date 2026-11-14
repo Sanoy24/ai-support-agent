@@ -7,6 +7,8 @@
 
 Runs entirely on your own machine with free local models, or with any hosted model you prefer.
 
+![The chat widget answering an order status question on the demo store](docs/screenshots/widget.png)
+
 ## What it does
 
 **For your customers**
@@ -21,6 +23,24 @@ Runs entirely on your own machine with free local models, or with any hosted mod
 - **Handoff inbox.** Each handoff arrives with a category (refund, damaged item, complaint and so on) and a short summary of what the customer needs.
 - **Unanswered questions.** Every question your policies couldn't answer is listed, so you know exactly what to add to your help content.
 - **Full transcripts.** See every conversation, which tools the assistant used and which policy sections it relied on.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/admin-overview.png" alt="Admin overview with a handoff waiting for a person and an unanswered question"></td>
+    <td><img src="docs/screenshots/admin-conversation.png" alt="Transcript of a refund request: the assistant verified the order and handed off with a summary"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Handoffs and gaps in your help content, at a glance</sub></td>
+    <td align="center"><sub>A refund request: the order is verified, then handed to a person</sub></td>
+  </tr>
+</table>
+
+<details>
+<summary>Demo storefront</summary>
+
+![Demo storefront for the fictional Trailhead Supply Co.](docs/screenshots/storefront.png)
+
+</details>
 
 ## Built to be safe with real customers
 
