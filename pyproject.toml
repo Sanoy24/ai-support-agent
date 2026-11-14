@@ -54,6 +54,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/support_agent"]
+# The built frontend is gitignored but must ship inside the package.
+artifacts = ["src/support_agent/web/dist/**"]
 
 [tool.ruff]
 line-length = 100

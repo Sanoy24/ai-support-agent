@@ -1,0 +1,25 @@
+# Runs the support agent against an Ollama server on the host machine.
+#
+#   ollama pull granite4.2:8b && ollama pull nomic-embed-text
+#   docker compose up --build
+#
+# Then open http://localhost:8000 (store) and http://localhost:8000/admin.
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - support-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  support-data:

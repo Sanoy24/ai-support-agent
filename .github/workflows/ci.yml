@@ -68,3 +68,30 @@ jobs:
 
       - name: Type-check and build
         run: npm run build
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ai-support-agent:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        run: |
+          docker run -d --name app -p 8000:8000 -e EMBEDDINGS_BACKEND=hashing ai-support-agent:ci
+          for i in $(seq 1 30); do curl -fs http://localhost:8000/healthz && break; sleep 2; done
+          curl -fs http://localhost:8000/ | grep -q '<div id="root">'
+          curl -fs http://localhost:8000/widget.js > /dev/null
+          curl -fs http://localhost:8000/api/store | grep -q TS-TENT-2P
+          docker logs app
