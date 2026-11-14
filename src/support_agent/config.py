@@ -42,7 +42,12 @@ class Settings(BaseSettings):
     # App
     database_url: str = "sqlite:///data/local/support.db"
     admin_password: SecretStr | None = Field(
-        default=None, description="Enables the admin page at /admin when set."
+        default=None, description="Enables the admin dashboard when set."
+    )
+    session_secret: SecretStr | None = Field(
+        default=None,
+        description="Key for signing admin session cookies. If unset, a random key is "
+        "generated at startup and admins are signed out on every restart.",
     )
     allowed_origins: list[str] = Field(
         default_factory=list, description="Websites allowed to embed the chat widget."

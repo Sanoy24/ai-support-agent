@@ -11,6 +11,7 @@ from support_agent.agent import ConversationState, HandoffCategory, Source, Supp
 from support_agent.agent.agent import FALLBACK_REPLY
 from support_agent.db import ChatMessage, Conversation, Handoff, UnansweredQuestion
 from support_agent.llm import LLMError, Message
+from support_agent.store import Product
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ class SupportService:
     @property
     def sessions(self) -> sessionmaker[Session]:
         return self._sessions
+
+    def list_products(self) -> list[Product]:
+        return self._agent.store.list_products()
 
     def handle_message(self, conversation_id: str | None, text: str) -> ChatResult:
         with self._sessions.begin() as session:

@@ -1,4 +1,4 @@
-"""FastAPI application: chat API, embeddable widget, demo page and admin."""
+"""FastAPI application: chat API, admin API and the built web frontend."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse, PlainTextResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from support_agent import __version__
@@ -19,11 +19,11 @@ from support_agent.api.admin import build_admin_router
 from support_agent.api.ratelimit import RateLimiter
 from support_agent.config import Settings, get_settings
 from support_agent.service import ConversationNotFoundError, SupportService
+from support_agent.store import Product
 
 logger = logging.getLogger(__name__)
 
-WEB_DIR = Path(str(resources.files("support_agent").joinpath("web")))
-templates = Jinja2Templates(directory=WEB_DIR / "templates")
+DEFAULT_FRONTEND_DIR = Path(str(resources.files("support_agent").joinpath("web", "dist")))
 
 
 class ChatRequest(BaseModel):
@@ -43,7 +43,16 @@ class ChatResponse(BaseModel):
     sources: list[SourceOut]
 
 
-def create_app(settings: Settings | None = None, service: SupportService | None = None) -> FastAPI:
+class StoreOut(BaseModel):
+    name: str
+    products: list[Product]
+
+
+def create_app(
+    settings: Settings | None = None,
+    service: SupportService | None = None,
+    frontend_dir: Path = DEFAULT_FRONTEND_DIR,
+) -> FastAPI:
     settings = settings or get_settings()
 
     @asynccontextmanager
@@ -61,6 +70,7 @@ def create_app(settings: Settings | None = None, service: SupportService | None 
         version=__version__,
         lifespan=lifespan,
         docs_url="/api/docs",
+        openapi_url="/api/openapi.json",
         redoc_url=None,
     )
     if settings.allowed_origins:
@@ -81,7 +91,7 @@ def create_app(settings: Settings | None = None, service: SupportService | None 
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.post("/api/chat", response_model=ChatResponse)
+    @app.post("/api/chat", response_model=ChatResponse, tags=["chat"])
     def chat(body: ChatRequest, request: Request) -> ChatResponse:
         client = request.client.host if request.client else "unknown"
         if not limiter.allow(client):
@@ -90,9 +100,8 @@ def create_app(settings: Settings | None = None, service: SupportService | None 
         if not message:
             raise HTTPException(422, "Message is empty.")
         if len(message) > settings.max_message_chars:
-            raise HTTPException(
-                413, f"Message is longer than {settings.max_message_chars} characters."
-            )
+            limit = settings.max_message_chars
+            raise HTTPException(413, f"Message is longer than {limit} characters.")
         try:
             result = get_service(request).handle_message(body.conversation_id, message)
         except ConversationNotFoundError:
@@ -104,17 +113,41 @@ def create_app(settings: Settings | None = None, service: SupportService | None 
             sources=[SourceOut(title=s.title, source=s.source) for s in result.sources],
         )
 
+    @app.get("/api/store", tags=["store"])
+    def store(request: Request) -> StoreOut:
+        """Public store info and catalog, used by the demo storefront."""
+        return StoreOut(name=settings.store_name, products=get_service(request).list_products())
+
+    app.include_router(build_admin_router(settings, get_service))
+    _mount_frontend(app, frontend_dir)
+    return app
+
+
+def _mount_frontend(app: FastAPI, frontend_dir: Path) -> None:
+    """Serve the built React app, with client-side routing fallback."""
+    index = frontend_dir / "index.html"
+    if (frontend_dir / "assets").is_dir():
+        app.mount("/assets", StaticFiles(directory=frontend_dir / "assets"), name="assets")
+
     @app.get("/widget.js", include_in_schema=False)
-    def widget() -> FileResponse:
+    def widget() -> Response:
+        path = frontend_dir / "widget.js"
+        if not path.is_file():
+            return PlainTextResponse("Widget not built. Run: npm --prefix frontend run build", 404)
         return FileResponse(
-            WEB_DIR / "static" / "widget.js",
-            media_type="application/javascript",
-            headers={"Cache-Control": "public, max-age=300"},
+            path, media_type="text/javascript", headers={"Cache-Control": "public, max-age=300"}
         )
 
-    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
-    def demo(request: Request) -> HTMLResponse:
-        return templates.TemplateResponse(request, "demo.html", {"store_name": settings.store_name})
-
-    app.include_router(build_admin_router(settings, get_service, templates))
-    return app
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa(path: str) -> Response:
+        if path.startswith("api/"):
+            raise HTTPException(404)
+        candidate = (frontend_dir / path).resolve()
+        if path and candidate.is_file() and candidate.is_relative_to(frontend_dir.resolve()):
+            return FileResponse(candidate)
+        if index.is_file():
+            return FileResponse(index, headers={"Cache-Control": "no-cache"})
+        return PlainTextResponse(
+            "Frontend not built. Run: npm --prefix frontend ci && npm --prefix frontend run build",
+            404,
+        )

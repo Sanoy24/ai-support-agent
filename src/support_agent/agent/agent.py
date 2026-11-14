@@ -73,6 +73,10 @@ class SupportAgent:
         self._max_failed_lookups = max_failed_lookups
         self._today = today
 
+    @property
+    def store(self) -> StoreClient:
+        return self._store
+
     def reply(
         self,
         history: list[Message],

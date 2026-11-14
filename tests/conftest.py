@@ -48,3 +48,11 @@ def make_service(knowledge: KnowledgeIndex, sessions: sessionmaker[Session]) -> 
         return SupportService(agent, sessions), model
 
     return factory
+
+
+@pytest.fixture(autouse=True)
+def isolate_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep a developer's .env file and environment variables out of the tests."""
+    monkeypatch.chdir(tmp_path)
+    for name in ("ADMIN_PASSWORD", "SESSION_SECRET", "STORE_BACKEND", "DATABASE_URL"):
+        monkeypatch.delenv(name, raising=False)
