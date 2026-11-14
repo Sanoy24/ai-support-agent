@@ -35,8 +35,24 @@ function readConfig(script: HTMLScriptElement | null): WidgetConfig & { color?: 
   };
 }
 
+/**
+ * Browsers ignore `@property` rules inside a shadow root, and Tailwind uses
+ * them for shadows, rings and transforms. Register them on the document
+ * instead. They only declare custom property types, so they can't change
+ * how the host page looks.
+ */
+function registerCssProperties(): void {
+  const rules = styles.match(/@property\s+[\w-]+\s*\{[^}]*\}/g);
+  if (!rules) return;
+  const style = document.createElement("style");
+  style.setAttribute("data-ai-support-agent-properties", "");
+  style.textContent = rules.join("\n");
+  document.head.appendChild(style);
+}
+
 function mount(config: WidgetConfig, color?: string): void {
   if (document.querySelector("[data-ai-support-agent]")) return;
+  registerCssProperties();
 
   const host = document.createElement("div");
   host.setAttribute("data-ai-support-agent", "");

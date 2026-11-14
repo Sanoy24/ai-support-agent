@@ -115,6 +115,7 @@ def test_frontend_routes_fall_back_to_index(make_client: ClientFactory) -> None:
         widget = client.get("/widget.js")
         assert widget.status_code == 200
         assert "javascript" in widget.headers["content-type"]
+        assert widget.headers["cache-control"] == "no-cache"
 
 
 def test_unknown_api_routes_are_not_swallowed_by_the_frontend(make_client: ClientFactory) -> None:

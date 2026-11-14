@@ -135,7 +135,7 @@ def _mount_frontend(app: FastAPI, frontend_dir: Path) -> None:
         if not path.is_file():
             return PlainTextResponse("Widget not built. Run: npm --prefix frontend run build", 404)
         return FileResponse(
-            path, media_type="text/javascript", headers={"Cache-Control": "public, max-age=300"}
+            path, media_type="text/javascript", headers={"Cache-Control": "no-cache"}
         )
 
     @app.get("/{path:path}", include_in_schema=False)
