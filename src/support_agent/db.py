@@ -1,0 +1,106 @@
+"""Database models for conversations, handoffs and unanswered questions."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, ClassVar
+
+from sqlalchemy import JSON, ForeignKey, String, Text, create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    Session,
+    mapped_column,
+    relationship,
+    sessionmaker,
+)
+from sqlalchemy.pool import StaticPool
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _uuid() -> str:
+    return uuid.uuid4().hex
+
+
+class Base(DeclarativeBase):
+    type_annotation_map: ClassVar[dict[Any, Any]] = {
+        dict[str, Any]: JSON,
+        list[dict[str, str]]: JSON,
+    }
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+    failed_order_lookups: Mapped[int] = mapped_column(default=0)
+    handed_off: Mapped[bool] = mapped_column(default=False)
+
+    messages: Mapped[list[ChatMessage]] = relationship(
+        back_populates="conversation", order_by="ChatMessage.id", cascade="all, delete-orphan"
+    )
+    handoffs: Mapped[list[Handoff]] = relationship(
+        back_populates="conversation", cascade="all, delete-orphan"
+    )
+
+
+class ChatMessage(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
+    role: Mapped[str] = mapped_column(String(16))
+    content: Mapped[str] = mapped_column(Text)
+    sources: Mapped[list[dict[str, str]]] = mapped_column(default=list)
+    tool_calls: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+    conversation: Mapped[Conversation] = relationship(back_populates="messages")
+
+
+class Handoff(Base):
+    __tablename__ = "handoffs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
+    category: Mapped[str] = mapped_column(String(32))
+    summary: Mapped[str] = mapped_column(Text)
+    resolved: Mapped[bool] = mapped_column(default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+    conversation: Mapped[Conversation] = relationship(back_populates="handoffs")
+
+
+class UnansweredQuestion(Base):
+    __tablename__ = "unanswered_questions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
+    question: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=_now)
+
+
+def make_engine(database_url: str) -> Engine:
+    if database_url.startswith("sqlite"):
+        if database_url == "sqlite://" or ":memory:" in database_url:
+            return create_engine(
+                database_url,
+                connect_args={"check_same_thread": False},
+                poolclass=StaticPool,
+            )
+        Path(database_url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
+        return create_engine(database_url, connect_args={"check_same_thread": False})
+    return create_engine(database_url, pool_pre_ping=True)
+
+
+def make_session_factory(engine: Engine) -> sessionmaker[Session]:
+    Base.metadata.create_all(engine)
+    return sessionmaker(engine, expire_on_commit=False)
