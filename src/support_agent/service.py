@@ -43,33 +43,44 @@ class SupportService:
         return self._agent.store.list_products()
 
     def handle_message(self, conversation_id: str | None, text: str) -> ChatResult:
+        # Phase 1: load (or create) the conversation in a short transaction.
         with self._sessions.begin() as session:
             conversation = self._get_or_create(session, conversation_id)
+            conversation_id = conversation.id
             history = [
                 Message("user" if m.role == "user" else "assistant", m.content)
                 for m in conversation.messages[-HISTORY_TURNS:]
             ]
-            state = ConversationState(failed_order_lookups=conversation.failed_order_lookups)
+            failed_before = conversation.failed_order_lookups
 
-            try:
-                reply = self._agent.reply(history, text, state)
-                reply_text, sources, handoff = reply.text, reply.sources, reply.handoff
-                tool_calls = reply.tool_calls
-                unanswered = reply.unanswered
-            except LLMError:
-                logger.exception("Model provider failed; handing off to a person")
-                reply_text, sources, tool_calls, unanswered = FALLBACK_REPLY, [], [], False
-                handoff = None
-                session.add(
-                    Handoff(
-                        conversation=conversation,
-                        category=HandoffCategory.OTHER.value,
-                        summary=f"The assistant was unavailable. Customer wrote: {text[:500]}",
-                    )
-                )
-                conversation.handed_off = True
+        # Phase 2: run the model with no transaction open. Model calls can take
+        # many seconds, and holding a database lock that long would block every
+        # other customer.
+        state = ConversationState(failed_order_lookups=failed_before)
+        handoff: Handoff | None
+        try:
+            reply = self._agent.reply(history, text, state)
+            reply_text, sources, tool_calls = reply.text, reply.sources, reply.tool_calls
+            unanswered = reply.unanswered
+            handoff = (
+                Handoff(category=reply.handoff.category.value, summary=reply.handoff.summary)
+                if reply.handoff
+                else None
+            )
+        except LLMError:
+            logger.exception("Model provider failed; handing off to a person")
+            reply_text, sources, tool_calls, unanswered = FALLBACK_REPLY, [], [], False
+            handoff = Handoff(
+                category=HandoffCategory.OTHER.value,
+                summary=f"The assistant was unavailable. Customer wrote: {text[:500]}",
+            )
 
-            conversation.failed_order_lookups = state.failed_order_lookups
+        # Phase 3: save the outcome in a second short transaction.
+        with self._sessions.begin() as session:
+            conversation = session.get_one(Conversation, conversation_id)
+            # Apply the change as a delta in case another message on this
+            # conversation was saved while the model was running.
+            conversation.failed_order_lookups += state.failed_order_lookups - failed_before
             conversation.messages.append(ChatMessage(role="user", content=text))
             conversation.messages.append(
                 ChatMessage(
@@ -80,19 +91,13 @@ class SupportService:
                 )
             )
             if handoff is not None:
-                session.add(
-                    Handoff(
-                        conversation=conversation,
-                        category=handoff.category.value,
-                        summary=handoff.summary,
-                    )
-                )
+                conversation.handoffs.append(handoff)
                 conversation.handed_off = True
             if unanswered:
-                session.add(UnansweredQuestion(conversation_id=conversation.id, question=text))
+                session.add(UnansweredQuestion(conversation_id=conversation_id, question=text))
 
             return ChatResult(
-                conversation_id=conversation.id,
+                conversation_id=conversation_id,
                 reply=reply_text,
                 handed_off=conversation.handed_off,
                 sources=sources,

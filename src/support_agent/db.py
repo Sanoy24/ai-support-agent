@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
-from sqlalchemy import JSON, ForeignKey, String, Text, create_engine
+from sqlalchemy import JSON, ForeignKey, String, Text, create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -97,8 +97,21 @@ def make_engine(database_url: str) -> Engine:
                 poolclass=StaticPool,
             )
         Path(database_url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
-        return create_engine(database_url, connect_args={"check_same_thread": False})
+        engine = create_engine(
+            database_url, connect_args={"check_same_thread": False, "timeout": 15}
+        )
+        event.listen(engine, "connect", _configure_sqlite)
+        return engine
     return create_engine(database_url, pool_pre_ping=True)
+
+
+def _configure_sqlite(dbapi_connection: Any, _record: Any) -> None:
+    # WAL lets readers and a writer work at the same time, which matters when
+    # several customers chat at once.
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
 
 
 def make_session_factory(engine: Engine) -> sessionmaker[Session]:
