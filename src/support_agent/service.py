@@ -34,6 +34,10 @@ class SupportService:
         self._agent = agent
         self._sessions = sessions
 
+    @property
+    def sessions(self) -> sessionmaker[Session]:
+        return self._sessions
+
     def handle_message(self, conversation_id: str | None, text: str) -> ChatResult:
         with self._sessions.begin() as session:
             conversation = self._get_or_create(session, conversation_id)

@@ -28,6 +28,9 @@ dependencies = [
   "numpy>=2.0",
 ]
 
+[project.scripts]
+support-agent = "support_agent.__main__:main"
+
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2"]
 local-embeddings = ["fastembed>=0.4"]
