@@ -105,7 +105,7 @@ def test_empty_search_marks_question_unanswered(knowledge: KnowledgeIndex) -> No
     assert tool_output(model, 1)["results"] == []
 
 
-def test_handoff_is_recorded_and_not_counted_as_unanswered(knowledge: KnowledgeIndex) -> None:
+def test_knowledge_gap_is_logged_even_when_handed_off(knowledge: KnowledgeIndex) -> None:
     model = ScriptedModel(
         [
             call("search_help_center", query="quantum chromodynamics"),
@@ -118,6 +118,18 @@ def test_handoff_is_recorded_and_not_counted_as_unanswered(knowledge: KnowledgeI
     assert reply.handoff is not None
     assert reply.handoff.category is HandoffCategory.REFUND
     assert reply.handoff.summary == "Wants a refund for TS-1001."
+    assert reply.unanswered is True
+
+
+def test_retrying_a_search_successfully_is_not_a_gap(knowledge: KnowledgeIndex) -> None:
+    model = ScriptedModel(
+        [
+            call("search_help_center", query="quantum chromodynamics"),
+            call("search_help_center", query="return window days"),
+            answer("You have 30 days."),
+        ]
+    )
+    reply = make_agent(model, knowledge).reply([], "How long do I have to send something back?")
     assert reply.unanswered is False
 
 

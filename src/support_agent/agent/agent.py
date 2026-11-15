@@ -47,7 +47,7 @@ class AgentReply:
     sources: list[Source] = field(default_factory=list)
     handoff: Handoff | None = None
     unanswered: bool = False
-    """True when the knowledge base had nothing relevant and no person was asked to help."""
+    """True when the agent searched the help content and found nothing relevant."""
     tool_calls: list[str] = field(default_factory=list)
 
 
@@ -115,7 +115,8 @@ class SupportAgent:
                     f"The assistant couldn't resolve this. Customer's last message: {user_message}",
                 )
 
-        result.unanswered = empty_searches > 0 and result.handoff is None
+        # A knowledge gap is worth fixing even if a person takes over the chat.
+        result.unanswered = empty_searches > 0 and not result.sources
         return result
 
     def _run_tool(
