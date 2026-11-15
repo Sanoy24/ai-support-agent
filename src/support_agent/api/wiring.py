@@ -62,7 +62,8 @@ def build_service(settings: Settings) -> SupportService:
         settings.llm_model,
         settings.llm_base_url,
         settings.llm_api_key.get_secret_value() if settings.llm_api_key else None,
-        reasoning_effort=settings.llm_reasoning_effort,
+        reasoning_effort=settings.llm_reasoning_effort or None,
+        fallback_models=settings.fallback_models,
         timeout=settings.llm_timeout_seconds,
     )
     agent = SupportAgent(

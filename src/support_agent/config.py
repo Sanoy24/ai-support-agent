@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     llm_model: str = "granite4.2:8b"
     llm_api_key: SecretStr | None = None
     llm_reasoning_effort: str | None = "none"
+    llm_fallback_models: str = Field(
+        default="",
+        description="Comma-separated models to try when the main one is rate limited "
+        "(OpenRouter only).",
+    )
     llm_timeout_seconds: float = 300.0
 
     # Embeddings and retrieval
@@ -64,6 +69,10 @@ class Settings(BaseSettings):
                 "STORE_BACKEND=shopify needs SHOPIFY_SHOP_DOMAIN and SHOPIFY_ACCESS_TOKEN"
             )
         return self
+
+    @property
+    def fallback_models(self) -> list[str]:
+        return [m.strip() for m in self.llm_fallback_models.split(",") if m.strip()]
 
     @property
     def min_score(self) -> float:

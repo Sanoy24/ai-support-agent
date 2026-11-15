@@ -93,6 +93,20 @@ uv run support-agent
 
 Open <http://localhost:8000> for the demo store and <http://localhost:8000/admin> for the dashboard.
 
+### Free hosted models (faster than local)
+
+On a laptop without a GPU, local models take 20 to 60 seconds per reply. [OpenRouter](https://openrouter.ai/) offers free models that answer in a few seconds. Create a key, then set:
+
+```bash
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_API_KEY=sk-or-...
+LLM_MODEL=nvidia/nemotron-3.5-lightning:free
+LLM_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,inclusionai/ling-3.2-flash:free
+LLM_REASONING_EFFORT=
+```
+
+Free models are rate limited, so the fallbacks and automatic retries matter. For real traffic, switch to a paid model by changing `LLM_MODEL`.
+
 ### Option 2: Docker
 
 With Ollama running on your machine:
@@ -126,6 +140,7 @@ All settings are environment variables (or entries in `.env`). See [`.env.exampl
 | `LLM_BASE_URL` | `http://localhost:11434/v1` | Any OpenAI-compatible endpoint: Ollama, OpenAI, OpenRouter, Groq and others |
 | `LLM_MODEL` | `granite4.2:8b` | Model name at that endpoint. It must support tool calling |
 | `LLM_API_KEY` | none | Needed for hosted providers only |
+| `LLM_FALLBACK_MODELS` | none | Comma-separated models to try when the main one is rate limited (OpenRouter) |
 | `EMBEDDINGS_BACKEND` | `ollama` | `ollama`, `fastembed` or `hashing` (offline, keyword-based) |
 | `ADMIN_PASSWORD` | none | Enables the admin dashboard |
 | `SESSION_SECRET` | random | Signs admin sessions; set it so sign-ins survive restarts |

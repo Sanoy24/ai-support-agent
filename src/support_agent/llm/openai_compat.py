@@ -7,14 +7,21 @@ OpenRouter, Groq and most other hosted providers.
 from __future__ import annotations
 
 import json
+import logging
 import re
+import time
+from collections.abc import Callable, Sequence
 from typing import Any
 
 import httpx
 
 from support_agent.llm.base import LLMError, Message, ModelResponse, ToolCall, ToolSpec
 
+logger = logging.getLogger(__name__)
+
 _THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL)
+_RETRYABLE_STATUS = {429, 502, 503, 504}
+_MAX_RETRY_DELAY = 10.0
 
 
 class OpenAICompatibleModel:
@@ -26,8 +33,11 @@ class OpenAICompatibleModel:
         *,
         temperature: float = 0.2,
         reasoning_effort: str | None = None,
+        fallback_models: Sequence[str] = (),
+        max_retries: int = 2,
         timeout: float = 300.0,
         transport: httpx.BaseTransport | None = None,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         """
         Args:
@@ -35,11 +45,18 @@ class OpenAICompatibleModel:
                 ``"none"`` turns reasoning off on Ollama, which makes local models several
                 times faster for tool-calling tasks like this one. Leave unset for providers
                 that don't support it.
+            fallback_models: Models to try if the main one is rate limited or unavailable.
+                Sent as OpenRouter's ``models`` routing list, so only set this for
+                providers that support it.
+            max_retries: Retries for rate limits and temporary provider errors.
         """
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self.model = model
         self._temperature = temperature
         self._reasoning_effort = reasoning_effort
+        self._fallback_models = list(fallback_models)
+        self._max_retries = max_retries
+        self._sleep = sleep
         self._client = httpx.Client(
             base_url=base_url.rstrip("/"), headers=headers, timeout=timeout, transport=transport
         )
@@ -55,13 +72,10 @@ class OpenAICompatibleModel:
             payload["tools"] = [_encode_tool(t) for t in tools]
         if self._reasoning_effort:
             payload["reasoning_effort"] = self._reasoning_effort
+        if self._fallback_models:
+            payload["models"] = [self.model, *self._fallback_models]
 
-        try:
-            response = self._client.post("/chat/completions", json=payload)
-        except httpx.HTTPError as exc:
-            raise LLMError(f"Could not reach the model provider: {exc}") from exc
-        if response.status_code >= 400:
-            raise LLMError(f"Model provider returned HTTP {response.status_code}")
+        response = self._post_with_retries(payload)
 
         try:
             message = response.json()["choices"][0]["message"]
@@ -73,6 +87,33 @@ class OpenAICompatibleModel:
             _decode_tool_call(i, c) for i, c in enumerate(message.get("tool_calls") or [])
         )
         return ModelResponse(content=content, tool_calls=calls)
+
+    def _post_with_retries(self, payload: dict[str, Any]) -> httpx.Response:
+        for attempt in range(self._max_retries + 1):
+            try:
+                response = self._client.post("/chat/completions", json=payload)
+            except httpx.HTTPError as exc:
+                raise LLMError(f"Could not reach the model provider: {exc}") from exc
+            if response.status_code < 400:
+                return response
+            if response.status_code not in _RETRYABLE_STATUS or attempt == self._max_retries:
+                raise LLMError(f"Model provider returned HTTP {response.status_code}")
+            delay = _retry_delay(response, attempt)
+            logger.warning(
+                "Model provider returned HTTP %s; retrying in %.1fs",
+                response.status_code,
+                delay,
+            )
+            self._sleep(delay)
+        raise AssertionError("unreachable")  # pragma: no cover
+
+
+def _retry_delay(response: httpx.Response, attempt: int) -> float:
+    retry_after = response.headers.get("retry-after", "")
+    try:
+        return min(float(retry_after), _MAX_RETRY_DELAY)
+    except ValueError:
+        return min(2.0**attempt, _MAX_RETRY_DELAY)
 
 
 def _encode_message(message: Message) -> dict[str, Any]:
