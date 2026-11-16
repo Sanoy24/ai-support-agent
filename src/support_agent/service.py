@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from support_agent.agent import ConversationState, HandoffCategory, Source, SupportAgent
@@ -24,6 +26,8 @@ class ChatResult:
     reply: str
     handed_off: bool
     sources: list[Source] = field(default_factory=list)
+    newly_handed_off: bool = False
+    """True only on the message that caused the handoff."""
 
 
 class ConversationNotFoundError(LookupError):
@@ -43,10 +47,34 @@ class SupportService:
         return self._agent.store.list_products()
 
     def handle_message(self, conversation_id: str | None, text: str) -> ChatResult:
+        """Handle a message from the website widget."""
+        return self._handle(text, lambda session: self._get_or_create(session, conversation_id))
+
+    def handle_channel_message(self, channel: str, external_ref: str, text: str) -> ChatResult:
+        """Handle a message from an external channel such as Telegram.
+
+        Messages from the same chat continue its open conversation, so the
+        assistant remembers context the way the website widget does.
+        """
+        return self._handle(
+            text, lambda session: self._get_or_create_for_chat(session, channel, external_ref)
+        )
+
+    def close_channel_conversation(self, channel: str, external_ref: str) -> bool:
+        """Close the chat's open conversation, so its next message starts a new one."""
+        with self._sessions.begin() as session:
+            conversation = self._open_conversation_for_chat(session, channel, external_ref)
+            if conversation is None:
+                return False
+            conversation.closed = True
+            return True
+
+    def _handle(self, text: str, resolve: Callable[[Session], Conversation]) -> ChatResult:
         # Phase 1: load (or create) the conversation in a short transaction.
         with self._sessions.begin() as session:
-            conversation = self._get_or_create(session, conversation_id)
+            conversation = resolve(session)
             conversation_id = conversation.id
+            was_handed_off = conversation.handed_off
             history = [
                 Message("user" if m.role == "user" else "assistant", m.content)
                 for m in conversation.messages[-HISTORY_TURNS:]
@@ -101,6 +129,7 @@ class SupportService:
                 reply=reply_text,
                 handed_off=conversation.handed_off,
                 sources=sources,
+                newly_handed_off=conversation.handed_off and not was_handed_off,
             )
 
     def _get_or_create(self, session: Session, conversation_id: str | None) -> Conversation:
@@ -112,4 +141,29 @@ class SupportService:
         conversation = Conversation()
         session.add(conversation)
         session.flush()
+        return conversation
+
+    @staticmethod
+    def _open_conversation_for_chat(
+        session: Session, channel: str, external_ref: str
+    ) -> Conversation | None:
+        return session.scalars(
+            select(Conversation)
+            .where(
+                Conversation.channel == channel,
+                Conversation.external_ref == external_ref,
+                Conversation.closed.is_(False),
+            )
+            .order_by(Conversation.created_at.desc())
+            .limit(1)
+        ).first()
+
+    def _get_or_create_for_chat(
+        self, session: Session, channel: str, external_ref: str
+    ) -> Conversation:
+        conversation = self._open_conversation_for_chat(session, channel, external_ref)
+        if conversation is None:
+            conversation = Conversation(channel=channel, external_ref=external_ref)
+            session.add(conversation)
+            session.flush()
         return conversation

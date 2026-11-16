@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
-from sqlalchemy import JSON, ForeignKey, String, Text, create_engine, event
+from sqlalchemy import JSON, ForeignKey, Index, String, Text, create_engine, event, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -35,10 +35,21 @@ class Base(DeclarativeBase):
     }
 
 
+class Channel:
+    WEB = "web"
+    TELEGRAM = "telegram"
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
+    __table_args__ = (Index("ix_conversations_channel_ref", "channel", "external_ref"),)
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    channel: Mapped[str] = mapped_column(String(16), default=Channel.WEB)
+    external_ref: Mapped[str | None] = mapped_column(String(64), default=None)
+    """The chat's id on the external channel, e.g. a Telegram chat id."""
+    closed: Mapped[bool] = mapped_column(default=False)
+    """Closed conversations stay in history; the next message on that chat starts a new one."""
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
     failed_order_lookups: Mapped[int] = mapped_column(default=0)
@@ -114,6 +125,34 @@ def _configure_sqlite(dbapi_connection: Any, _record: Any) -> None:
     cursor.close()
 
 
+# Columns added after the first release. create_all() creates new tables but
+# never alters existing ones, so add these to databases created earlier.
+_ADDED_COLUMNS = {
+    "conversations": {
+        "channel": "VARCHAR(16) NOT NULL DEFAULT 'web'",
+        "external_ref": "VARCHAR(64)",
+        "closed": "BOOLEAN NOT NULL DEFAULT FALSE",
+    },
+}
+
+
+def _add_missing_columns(engine: Engine) -> None:
+    inspector = inspect(engine)
+    with engine.begin() as connection:
+        for table, columns in _ADDED_COLUMNS.items():
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            for name, ddl in columns.items():
+                if name not in existing:
+                    connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_conversations_channel_ref "
+                "ON conversations (channel, external_ref)"
+            )
+        )
+
+
 def make_session_factory(engine: Engine) -> sessionmaker[Session]:
     Base.metadata.create_all(engine)
+    _add_missing_columns(engine)
     return sessionmaker(engine, expire_on_commit=False)

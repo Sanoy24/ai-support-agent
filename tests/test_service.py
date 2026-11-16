@@ -151,3 +151,73 @@ def test_no_database_lock_is_held_while_the_model_runs(
 
     assert result.reply == "Hello!"
     assert count(sessions, Conversation) == 2
+
+
+def test_channel_messages_continue_the_same_chat(
+    make_service: ServiceFactory, sessions: sessionmaker[Session]
+) -> None:
+    service, model = make_service([answer("Hi!"), answer("Sure."), answer("Hello again.")])
+
+    first = service.handle_channel_message("telegram", "12345", "hello")
+    second = service.handle_channel_message("telegram", "12345", "thanks")
+    other_chat = service.handle_channel_message("telegram", "99999", "hi")
+
+    assert second.conversation_id == first.conversation_id
+    assert other_chat.conversation_id != first.conversation_id
+    messages, _ = model.requests[1]
+    assert [m.content for m in messages[1:]] == ["hello", "Hi!", "thanks"]
+    with sessions() as session:
+        conversation = session.get(Conversation, first.conversation_id)
+        assert conversation is not None
+        assert (conversation.channel, conversation.external_ref) == ("telegram", "12345")
+
+
+def test_closing_a_chat_starts_a_new_conversation(make_service: ServiceFactory) -> None:
+    service, _ = make_service([answer("Hi!"), answer("Fresh start.")])
+
+    first = service.handle_channel_message("telegram", "12345", "hello")
+    assert service.close_channel_conversation("telegram", "12345") is True
+    assert service.close_channel_conversation("telegram", "12345") is False
+    second = service.handle_channel_message("telegram", "12345", "new question")
+
+    assert second.conversation_id != first.conversation_id
+
+
+def test_newly_handed_off_is_only_true_once(make_service: ServiceFactory) -> None:
+    service, _ = make_service(
+        [
+            call("hand_off_to_human", category="refund", summary="Refund."),
+            answer("A person will follow up."),
+            answer("Anything else?"),
+        ]
+    )
+    first = service.handle_channel_message("telegram", "1", "refund please")
+    second = service.handle_channel_message("telegram", "1", "ok thanks")
+
+    assert (first.handed_off, first.newly_handed_off) == (True, True)
+    assert (second.handed_off, second.newly_handed_off) == (True, False)
+
+
+def test_older_databases_get_the_new_columns(tmp_path: Path) -> None:
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "CREATE TABLE conversations (id VARCHAR(32) PRIMARY KEY, created_at DATETIME, "
+            "updated_at DATETIME, failed_order_lookups INTEGER, handed_off BOOLEAN)"
+        )
+        connection.execute(
+            "INSERT INTO conversations VALUES ('abc', '2026-11-01', '2026-11-01', 0, 0)"
+        )
+
+    sessions = make_session_factory(make_engine(f"sqlite:///{path}"))
+
+    with sessions() as session:
+        conversation = session.get(Conversation, "abc")
+        assert conversation is not None
+        assert (conversation.channel, conversation.external_ref, conversation.closed) == (
+            "web",
+            None,
+            False,
+        )
