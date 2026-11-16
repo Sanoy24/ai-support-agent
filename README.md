@@ -123,7 +123,7 @@ The demo store has fictional orders you can ask about:
 | Order | Email | Status |
 |---|---|---|
 | `TS-1002` | `liam.okafor@example.com` | Shipped |
-| `TS-1003` | `sofia.ramirez@example.com` | Processing |
+| `TS-1003` | `sofia.ramirez@example.com` | Delivered (try a damaged-item refund) |
 | `TS-1001` | `maya.chen@example.com` | Delivered |
 
 Then try "What's your return policy?", "Do the boots run true to size?", "My tent arrived broken, I want a refund" or "Do you sell kayaks?".

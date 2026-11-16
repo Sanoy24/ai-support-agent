@@ -38,11 +38,18 @@
       "number": "TS-1003",
       "customer_email": "sofia.ramirez@example.com",
       "customer_first_name": "Sofia",
-      "placed_on": "2026-11-13",
-      "status": "processing",
+      "placed_on": "2026-11-08",
+      "status": "delivered",
       "items": [
         {"sku": "TS-TENT-2P", "title": "Basecamp 2-Person Tent", "quantity": 1, "unit_price": 249.0}
-      ]
+      ],
+      "shipment": {
+        "carrier": "FedEx",
+        "tracking_number": "772899034561",
+        "shipped_on": "2026-11-09",
+        "estimated_delivery": "2026-11-13",
+        "delivered_on": "2026-11-12"
+      }
     },
     {
       "number": "TS-1004",

@@ -41,7 +41,7 @@ const TINTS = [
 
 const DEMO_ORDERS = [
   { order: "TS-1002", email: "liam.okafor@example.com", note: "Shipped, in transit" },
-  { order: "TS-1003", email: "sofia.ramirez@example.com", note: "Processing" },
+  { order: "TS-1003", email: "sofia.ramirez@example.com", note: "Delivered" },
   { order: "TS-1001", email: "maya.chen@example.com", note: "Delivered" },
 ];
 
