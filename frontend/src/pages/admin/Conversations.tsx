@@ -1,6 +1,7 @@
 import { ChevronRight, MessagesSquare } from "lucide-react";
 import { Link } from "react-router";
 
+import { ChannelBadge } from "@/components/ChannelBadge";
 import { Badge, Card, EmptyState, ErrorMessage, Spinner } from "@/components/ui";
 import { admin } from "@/lib/api";
 import { useAsync } from "@/lib/useAsync";
@@ -34,9 +35,12 @@ export function Conversations() {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-zinc-900">{c.preview || "(no messages)"}</p>
-                    <p className="mt-0.5 text-xs text-zinc-500">
-                      {c.message_count} messages · {timeAgo(c.updated_at)}
-                    </p>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
+                      <ChannelBadge channel={c.channel} />
+                      <span>
+                        · {c.message_count} messages · {timeAgo(c.updated_at)}
+                      </span>
+                    </div>
                   </div>
                   {c.handed_off ? (
                     <Badge tone="warning">Handed off</Badge>

@@ -1,6 +1,7 @@
 import { ArrowLeft, BookOpen, Wrench } from "lucide-react";
 import { Link, useParams } from "react-router";
 
+import { ChannelBadge } from "@/components/ChannelBadge";
 import { Badge, Card, CardHeader, ErrorMessage, Spinner } from "@/components/ui";
 import { admin } from "@/lib/api";
 import { uniqueSourceLabels } from "@/lib/chat";
@@ -94,6 +95,12 @@ export function ConversationDetail() {
                 ) : (
                   <Badge tone="success">Handled by assistant</Badge>
                 )}
+              </div>
+              <p className="mt-4 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                Channel
+              </p>
+              <div className="mt-1">
+                <ChannelBadge channel={conversation.data.channel} />
               </div>
               <p className="mt-4 text-xs font-medium tracking-wide text-zinc-500 uppercase">
                 Conversation ID

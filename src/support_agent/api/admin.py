@@ -47,6 +47,7 @@ class UnansweredOut(BaseModel):
 
 class ConversationSummaryOut(BaseModel):
     id: str
+    channel: str
     created_at: datetime
     updated_at: datetime
     message_count: int
@@ -64,6 +65,7 @@ class MessageOut(BaseModel):
 
 class ConversationOut(BaseModel):
     id: str
+    channel: str
     created_at: datetime
     handed_off: bool
     handoffs: list[HandoffOut]
@@ -207,6 +209,7 @@ def build_admin_router(
             return [
                 ConversationSummaryOut(
                     id=c.id,
+                    channel=c.channel,
                     created_at=c.created_at,
                     updated_at=c.updated_at,
                     message_count=len(c.messages),
@@ -224,6 +227,7 @@ def build_admin_router(
                 raise HTTPException(404, "Conversation not found.")
             return ConversationOut(
                 id=convo.id,
+                channel=convo.channel,
                 created_at=convo.created_at,
                 handed_off=convo.handed_off,
                 handoffs=[_handoff_out(h) for h in convo.handoffs],

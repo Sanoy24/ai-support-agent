@@ -205,6 +205,7 @@ def test_admin_handoff_flow(make_client: ClientFactory) -> None:
 
         conversations = client.get("/api/admin/conversations").json()
         assert {c["preview"] for c in conversations} == {"refund please", "kayaks?"}
+        assert {c["channel"] for c in conversations} == {"web"}
 
         detail = client.get(f"/api/admin/conversations/{chat['conversation_id']}").json()
         assert [m["role"] for m in detail["messages"]] == ["user", "assistant"]

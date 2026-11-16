@@ -72,6 +72,7 @@ export interface UnansweredQuestion {
 
 export interface ConversationSummary {
   id: string;
+  channel: string;
   created_at: string;
   updated_at: string;
   message_count: number;
@@ -89,6 +90,7 @@ export interface TranscriptMessage {
 
 export interface Conversation {
   id: string;
+  channel: string;
   created_at: string;
   handed_off: boolean;
   handoffs: Handoff[];
