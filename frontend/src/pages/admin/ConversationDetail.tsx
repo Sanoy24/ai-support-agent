@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router";
 import { Badge, Card, CardHeader, ErrorMessage, Spinner } from "@/components/ui";
 import { admin } from "@/lib/api";
 import { uniqueSourceLabels } from "@/lib/chat";
+import { FormattedText } from "@/lib/FormattedText";
 import { categoryLabel } from "@/lib/labels";
 import { useAsync } from "@/lib/useAsync";
 import { cn, timeAgo } from "@/lib/utils";
@@ -54,7 +55,7 @@ export function ConversationDetail() {
                           : "rounded-bl-md bg-zinc-100 text-zinc-900",
                       )}
                     >
-                      {m.content}
+                      <FormattedText text={m.content} />
                     </div>
                     {m.role === "assistant" && (m.tools.length > 0 || m.sources.length > 0) && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11px] text-zinc-500">

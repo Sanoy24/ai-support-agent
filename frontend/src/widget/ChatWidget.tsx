@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { ChatError, sendChatMessage, uniqueSourceLabels, type Source } from "@/lib/chat";
+import { FormattedText } from "@/lib/FormattedText";
 import { cn } from "@/lib/utils";
 
 export interface WidgetConfig {
@@ -156,7 +157,7 @@ export function ChatWidget({ config }: { config: WidgetConfig }) {
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{config.title}</p>
               <p className="truncate text-xs text-zinc-500">
-                AI assistant · a person can take over anytime
+                AI assistant · a person can take over
               </p>
             </div>
             {state.entries.length > 0 && (
@@ -276,7 +277,7 @@ function Bubble({
               : "rounded-bl-md bg-zinc-100 text-zinc-900",
           )}
         >
-          {text}
+          <FormattedText text={text} />
         </div>
         {labels.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
