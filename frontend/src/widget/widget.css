@@ -46,3 +46,10 @@
   animation: asa-pop 160ms ease-out;
   transform-origin: bottom right;
 }
+
+/* Slim, quiet scrollbars instead of the platform default arrows. */
+.asa-input,
+.asa-log {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
+}

@@ -2,6 +2,7 @@ import { ArrowUp, BookOpen, MessageCircle, SquarePen, UserRound, X } from "lucid
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -32,6 +33,7 @@ interface StoredState {
 }
 
 const STORAGE_KEY = "ai-support-agent:chat";
+const MAX_INPUT_HEIGHT = 120; // about five lines
 
 function loadState(): StoredState {
   try {
@@ -61,6 +63,16 @@ export function ChatWidget({ config }: { config: WidgetConfig }) {
   const nextId = useRef(state.entries.reduce((max, e) => Math.max(max, e.id), 0) + 1);
 
   useEffect(() => saveState(state), [state]);
+
+  // Grow the message box with its content, up to about five lines, then scroll.
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    const height = Math.min(input.scrollHeight, MAX_INPUT_HEIGHT);
+    input.style.height = `${height}px`;
+    input.style.overflowY = input.scrollHeight > MAX_INPUT_HEIGHT ? "auto" : "hidden";
+  }, [draft, open]);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
@@ -171,7 +183,7 @@ export function ChatWidget({ config }: { config: WidgetConfig }) {
 
           <div
             ref={logRef}
-            className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
+            className="asa-log flex-1 space-y-3 overflow-y-auto px-4 py-4"
             aria-live="polite"
           >
             <Bubble role="assistant" text={config.greeting} />
@@ -215,7 +227,7 @@ export function ChatWidget({ config }: { config: WidgetConfig }) {
                 maxLength={2000}
                 placeholder="Ask about an order, shipping or returns"
                 aria-label="Message"
-                className="max-h-28 min-h-6 flex-1 resize-none bg-transparent leading-6 outline-none placeholder:text-zinc-400"
+                className="asa-input min-h-6 flex-1 resize-none overflow-hidden bg-transparent leading-6 break-words outline-none placeholder:text-zinc-400"
               />
               <button
                 type="submit"
