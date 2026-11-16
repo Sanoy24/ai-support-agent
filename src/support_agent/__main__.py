@@ -18,6 +18,9 @@ def main() -> None:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
+    # httpx logs every request URL at INFO. Telegram puts the bot token in the
+    # URL, so keep request logs out of the output.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     uvicorn.run(
         "support_agent.api.app:create_app",
         factory=True,

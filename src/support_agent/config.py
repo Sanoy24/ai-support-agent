@@ -44,6 +44,11 @@ class Settings(BaseSettings):
         "Defaults to a value tuned for the chosen embeddings backend.",
     )
 
+    # Channels
+    telegram_bot_token: SecretStr | None = Field(
+        default=None, description="Token from @BotFather. Starts the Telegram bot when set."
+    )
+
     # App
     database_url: str = "sqlite:///data/local/support.db"
     admin_password: SecretStr | None = Field(

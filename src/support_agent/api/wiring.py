@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+from collections.abc import Callable
 from importlib import resources
 from pathlib import Path
 
@@ -71,3 +73,34 @@ def build_service(settings: Settings) -> SupportService:
     )
     sessions = make_session_factory(make_engine(settings.database_url))
     return SupportService(agent, sessions)
+
+
+def start_channels(settings: Settings, service: SupportService) -> Callable[[], None]:
+    """Start messaging channels in the background. Returns a function that stops them."""
+    if settings.telegram_bot_token is None:
+        return lambda: None
+
+    from support_agent.channels.telegram import TelegramBot, TelegramClient
+
+    client = TelegramClient(settings.telegram_bot_token.get_secret_value())
+    greeting = (
+        f"Hi! I'm the {settings.store_name} assistant. I can check on an order or answer "
+        "questions about shipping, returns and our products.\n\n"
+        "Send /new at any time to start a new conversation."
+    )
+    bot = TelegramBot(
+        client,
+        service,
+        greeting=greeting,
+        rate_limit_per_minute=settings.chat_rate_limit_per_minute,
+    )
+    stop = threading.Event()
+    thread = threading.Thread(target=bot.run_polling, args=(stop,), name="telegram", daemon=True)
+    thread.start()
+
+    def stop_bot() -> None:
+        stop.set()
+        thread.join(timeout=30)
+        client.close()
+
+    return stop_bot

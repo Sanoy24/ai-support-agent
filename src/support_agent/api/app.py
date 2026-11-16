@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from support_agent import __version__
 from support_agent.api.admin import build_admin_router
 from support_agent.api.ratelimit import RateLimiter
+from support_agent.api.wiring import start_channels
 from support_agent.config import Settings, get_settings
 from support_agent.service import ConversationNotFoundError, SupportService
 from support_agent.store import Product
@@ -63,7 +64,12 @@ def create_app(
             app.state.service = build_service(settings)
         else:
             app.state.service = service
-        yield
+
+        stop_channels = start_channels(settings, app.state.service)
+        try:
+            yield
+        finally:
+            stop_channels()
 
     app = FastAPI(
         title="ai-support-agent",
