@@ -7,7 +7,9 @@
 
 Runs entirely on your own machine with free local models, or with any hosted model you prefer.
 
-![The chat widget answering an order status question on the demo store](docs/screenshots/widget.png)
+[![Watch the 2-minute demo on YouTube](https://img.youtube.com/vi/wgjD3xhUipU/maxresdefault.jpg)](https://www.youtube.com/watch?v=wgjD3xhUipU)
+
+<p align="center"><b><a href="https://www.youtube.com/watch?v=wgjD3xhUipU">▶ Watch the 2-minute demo</a></b>: order lookup, a refund handed to a person, and the admin dashboard.</p>
 
 ## What it does
 
@@ -36,7 +38,9 @@ Runs entirely on your own machine with free local models, or with any hosted mod
 </table>
 
 <details>
-<summary>Demo storefront</summary>
+<summary>More screenshots</summary>
+
+![The chat widget answering an order status question on the demo store](docs/screenshots/widget.png)
 
 ![Demo storefront for the fictional Trailhead Supply Co.](docs/screenshots/storefront.png)
 
