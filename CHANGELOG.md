@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Demo storefront and admin dashboard with password sign-in.
 - Docker image, Compose setup and CI for Python, the frontend and the image.
 - Retries for rate limits and temporary provider errors, and OpenRouter fallback models.
+- Telegram bot channel: the same assistant answers customers on Telegram, with `/new` to start over.
+- Conversations record their channel, shown as a Website or Telegram badge in the admin dashboard.
+- Start a new conversation from the chat widget header.
 
 ### Fixed
 

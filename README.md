@@ -19,6 +19,7 @@ Runs entirely on your own machine with free local models, or with any hosted mod
 - **Answers from your own policies.** Shipping, returns, warranty, payments and sizing questions are answered from your policy documents and product catalog, with the sources shown under each answer.
 - **A person when it matters.** Refunds, cancellations, damaged items, complaints, or "can I talk to someone?" are passed to your team instead of being improvised.
 - **One script tag.** Add the chat widget to any website, Shopify theme included.
+- **Telegram too.** The same assistant answers customers in a Telegram bot, with the same rules and the same dashboard.
 
 **For your team**
 
@@ -61,17 +62,19 @@ Runs entirely on your own machine with free local models, or with any hosted mod
 
 ```mermaid
 flowchart LR
-    W[Chat widget<br/>on your store] -->|POST /api/chat| A[Support agent]
+    W[Chat widget<br/>on your store] -->|POST /api/chat| SV[Conversation<br/>service]
+    T[Telegram bot] -->|long polling| SV
+    SV --> A[Support agent]
     A -->|lookup_order| S[(Store<br/>Shopify or demo)]
     A -->|search_help_center| K[Knowledge index<br/>policies + catalog]
     A -->|hand_off_to_human| H[(Handoffs)]
     A <-->|tool calling| L[LLM<br/>Ollama or any<br/>OpenAI-compatible API]
-    A --> D[(Conversations<br/>SQLite / Postgres)]
+    SV --> D[(Conversations<br/>SQLite / Postgres)]
     D --> P[Admin dashboard]
     H --> P
 ```
 
-1. The customer writes in the widget.
+1. The customer writes in the website widget or the Telegram bot. Both go through the same conversation service, which keeps one conversation per visitor or Telegram chat.
 2. The agent decides what it needs: an order lookup, a search of your policies and catalog, or a handoff.
 3. Order data comes from your store's API (read-only). Policy answers come from the passages the search returns.
 4. The reply goes back with its sources. Handoffs and unanswered questions are saved for your team.
@@ -149,6 +152,7 @@ All settings are environment variables (or entries in `.env`). See [`.env.exampl
 | `ADMIN_PASSWORD` | none | Enables the admin dashboard |
 | `SESSION_SECRET` | random | Signs admin sessions; set it so sign-ins survive restarts |
 | `ALLOWED_ORIGINS` | none | Websites allowed to call the API when the widget is embedded on another domain |
+| `TELEGRAM_BOT_TOKEN` | none | Token from @BotFather. Starts the Telegram bot when set |
 | `DATABASE_URL` | SQLite file | Any SQLAlchemy URL, e.g. `postgresql+psycopg://...` |
 
 ### Connecting Shopify
@@ -174,6 +178,19 @@ All settings are environment variables (or entries in `.env`). See [`.env.exampl
 ```
 
 Optional attributes: `data-greeting`, and `data-suggestions` (separated by `|`). If the widget is served from a different domain than your store, add your store's URL to `ALLOWED_ORIGINS`.
+
+### Adding a Telegram bot
+
+1. In Telegram, open [@BotFather](https://t.me/BotFather), send `/newbot` and follow the steps.
+2. Put the token it gives you in `.env`:
+
+   ```bash
+   TELEGRAM_BOT_TOKEN=123456789:AA...
+   ```
+
+3. Restart the server. The bot starts automatically using long polling, so it works without a public URL.
+
+Customers can send `/new` to start a fresh conversation. The bot answers one-to-one chats only, keeps messages from each chat in order, and is rate limited per chat. Conversations show up in the admin dashboard with a Telegram label.
 
 ## Development
 
@@ -202,6 +219,7 @@ src/support_agent/
   llm/         OpenAI-compatible client and a scripted test model
   store/       store models, demo store and Shopify adapter
   api/         FastAPI app, admin API, auth and rate limiting
+  channels/    messaging channels (Telegram)
   service.py   connects the agent to the database
   demo/        demo store data and policy documents
 frontend/
@@ -212,7 +230,7 @@ tests/         unit and API tests (no LLM or network needed)
 
 ## Roadmap
 
-- WhatsApp and email channels
+- WhatsApp and email channels (the channel layer that powers Telegram makes these small additions)
 - Streaming replies
 - Notifications to Slack or email for new handoffs
 - More store platforms (WooCommerce, BigCommerce)
