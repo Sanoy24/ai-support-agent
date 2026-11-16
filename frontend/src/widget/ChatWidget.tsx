@@ -1,4 +1,4 @@
-import { ArrowUp, BookOpen, MessageCircle, UserRound, X } from "lucide-react";
+import { ArrowUp, BookOpen, MessageCircle, SquarePen, UserRound, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -121,6 +121,12 @@ export function ChatWidget({ config }: { config: WidgetConfig }) {
     }
   };
 
+  const startNewConversation = () => {
+    setState({ conversationId: null, entries: [], handedOff: false });
+    setDraft("");
+    inputRef.current?.focus();
+  };
+
   const showSuggestions = state.entries.length === 0 && !pending;
 
   return (
@@ -141,6 +147,18 @@ export function ChatWidget({ config }: { config: WidgetConfig }) {
                 AI assistant · a person can take over anytime
               </p>
             </div>
+            {state.entries.length > 0 && (
+              <button
+                type="button"
+                onClick={startNewConversation}
+                disabled={pending}
+                title="Start a new conversation"
+                aria-label="Start a new conversation"
+                className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-40"
+              >
+                <SquarePen className="size-4" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setOpen(false)}
